@@ -238,6 +238,10 @@ class DemoFragment  : CameraFragment(), View.OnClickListener, CaptureMediaView.O
         ToastUtils.showLong("camera closed success")
     }
 
+
+    /**
+     * camera opened success
+     */
     private fun handleCameraOpened() {
         mViewBinding.uvcLogoIv.visibility = View.GONE
         mViewBinding.frameRateTv.visibility = View.VISIBLE
@@ -290,6 +294,7 @@ class DemoFragment  : CameraFragment(), View.OnClickListener, CaptureMediaView.O
         return AspectRatioTextureView(requireContext())
     }
 
+    // Video 容器布局
     override fun getCameraViewContainer(): ViewGroup {
         return mViewBinding.cameraViewContainer
     }

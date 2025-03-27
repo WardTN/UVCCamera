@@ -56,6 +56,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
                 return
             }
         }?.also { view->
+            //添加容器
             getCameraViewContainer()?.apply {
                 removeAllViews()
                 addView(view, getViewLayoutParams(this))
@@ -849,6 +850,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         getCurrentCamera()?.setRenderSize(surfaceWidth, surfaceHeight)
     }
 
+    // get view layout params
     private fun getViewLayoutParams(viewGroup: ViewGroup): ViewGroup.LayoutParams {
         return when(viewGroup) {
             is FrameLayout -> {

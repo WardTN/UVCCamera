@@ -13,7 +13,7 @@ import kotlin.math.abs
  *
  * @author Created by jiangdg on 2021/12/23
  */
-class AspectRatioTextureView: TextureView, IAspectRatio {
+open class AspectRatioTextureView: TextureView, IAspectRatio {
 
     private var mAspectRatio = -1.0
 
