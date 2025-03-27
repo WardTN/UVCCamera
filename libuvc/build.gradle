@@ -1,0 +1,100 @@
+apply plugin: 'com.android.library'
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+android {
+	compileSdk 31
+
+	compileOptions {
+		sourceCompatibility JavaVersion.VERSION_1_8
+		targetCompatibility JavaVersion.VERSION_1_8
+	}
+
+    defaultConfig {
+		minSdk 26
+		targetSdk 31
+		versionCode 1
+		versionName "1.0"
+    }
+
+	lintOptions {
+		checkReleaseBuilds false
+		// Or, if you prefer, you can continue to check for errors in release builds,
+		// but continue the build even when errors are found:
+		abortOnError false
+		// The demo app does not have translations.
+		disable 'MissingTranslation'
+	}
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+	compileTask -> compileTask.dependsOn ndkBuild
+}
+
+
+String getNdkBuildPath() {
+	def ndkBuildingDir = System.getenv("NDK_HOME")
+	if (ndkBuildingDir==null || ndkBuildingDir.isEmpty()) {
+		Properties properties = new Properties()
+		properties.load(project.rootProject.file('local.properties').newDataInputStream())
+		ndkBuildingDir = properties.getProperty("ndk.dir")
+	}
+	def ndkBuildPath = ndkBuildingDir
+	if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+		ndkBuildPath = ndkBuildingDir + '/ndk-build.cmd'
+	} else {
+		ndkBuildPath = ndkBuildingDir + '/ndk-build'
+	}
+	return ndkBuildPath
+}
+
+/**
+ * 执行NDK构建任务
+ * 该任务通过调用NDK的ndk-build命令来编译JNI源代码
+ * 使用Exec类型以支持执行外部命令
+ */
+task ndkBuild(type: Exec, description: 'Compile JNI source via NDK') {
+	// 打印执行ndkBuild任务的信息
+	println('executing ndkBuild')
+
+	// 获取NDK构建脚本的路径
+	def ndkBuildPath = getNdkBuildPath();
+
+	// 设置命令行指令来调用NDK构建脚本
+	// '-j8' 参数指定使用8个并行构建进程
+	// '-C' 参数指定构建目录，这里使用的是'src/main'目录的绝对路径
+	commandLine ndkBuildPath, '-j8', '-C', file('src/main').absolutePath
+}
+
+
+/**
+ * 定义一个名为ndkClean的任务，类型为Exec，用于清理JNI库
+ * 该任务的目的是执行NDK构建脚本的clean命令，以清理掉之前构建的本地库
+ */
+task ndkClean(type: Exec, description: 'clean JNI libraries') {
+	// 打印执行ndkBuild clean的信息，表明任务开始执行
+	println('executing ndkBuild clean')
+
+	// 调用getNdkBuildPath方法获取NDK构建脚本的路径，并将其赋值给ndkBuildPath变量
+	def ndkBuildPath = getNdkBuildPath();
+
+	// 设置任务的commandLine属性，指定要执行的命令
+	// 这里是使用NDK构建脚本的路径，加上clean命令和-C选项，以及src/main目录的绝对路径
+	// 该命令将改变工作目录到src/main，然后执行clean命令
+	commandLine ndkBuildPath, 'clean', '-C', file('src/main').absolutePath
+}
+
+clean.dependsOn 'ndkClean'
+
+dependencies {
+    implementation fileTree(dir: new File(buildDir, 'libs'), include: '*.jar')
+	implementation 'androidx.appcompat:appcompat:1.3.0'
+	implementation 'com.elvishew:xlog:1.11.0'
+}
