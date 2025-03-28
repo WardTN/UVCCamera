@@ -1,7 +1,6 @@
-package com.wardtn.uvccamera
+package com.wardtn.uvccameraDemo
 
 import android.Manifest
-import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Gravity
@@ -11,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.PermissionChecker
+import com.wardtn.uvccamera.USBCameraTexureView
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
