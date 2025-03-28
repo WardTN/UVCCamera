@@ -8,5 +8,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "UVCCamera"
 include ':app'
-include ':libuvc'
 include ':UVCCamera'
