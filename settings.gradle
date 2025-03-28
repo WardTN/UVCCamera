@@ -6,6 +6,6 @@ dependencyResolutionManagement {
         maven { url "https://jitpack.io" }
     }
 }
-rootProject.name = "UVCCamera"
+rootProject.name = "UVC"
 include ':app'
 include ':UVCCamera'
