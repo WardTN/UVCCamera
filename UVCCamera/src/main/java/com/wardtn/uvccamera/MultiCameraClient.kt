@@ -262,7 +262,7 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         private var mAudioProcess: AbstractProcessor? = null // 音频合成
         private var mVideoProcess: AbstractProcessor? = null // 视频合成
         private var mRenderManager: RenderManager? = null
-        private var mCameraView: Any? = null
+        private var mCameraView: Any? = null // 渲染view
         private var mCameraStateCallback: ICameraStateCallBack? = null
         private var mSizeChangedFuture: SettableFuture<Pair<Int, Int>>? = null
         private var mContext = ctx
@@ -378,6 +378,7 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
                     mRenderManager?.stopRenderScreen()
                     mRenderManager = null
                 }
+                // 裁剪
                 MSG_CAPTURE_IMAGE -> {
                     (msg.obj as Pair<*, *>).apply {
                         val path = first as? String

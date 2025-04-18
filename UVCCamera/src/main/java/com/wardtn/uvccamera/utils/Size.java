@@ -268,14 +268,15 @@ public class Size implements Parcelable {
 		return String.format(Locale.US, "Size(%dx%d@%4.1f,type:%d,frame:%d,index:%d,%s)", width, height, frame_rate, type, frame_type, index, frameRates);
 	}
 
-	public static final Creator<Size> CREATOR = new Creator<Size>() {
-		@Override
-		public Size createFromParcel(final Parcel source) {
-			return new Size(source);
-		}
-		@Override
-		public Size[] newArray(final int size) {
-			return new Size[size];
-		}
-	};
+	public static final Creator<Size> CREATOR = new Creator<>() {
+        @Override
+        public Size createFromParcel(final Parcel source) {
+            return new Size(source);
+        }
+
+        @Override
+        public Size[] newArray(final int size) {
+            return new Size[size];
+        }
+    };
 }

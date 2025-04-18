@@ -1,5 +1,6 @@
 package com.wardtn.uvccamera.usb;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources.NotFoundException;
 import android.hardware.usb.UsbDevice;
@@ -82,7 +83,8 @@ public final class DeviceFilter {
 	 * @param deviceFilterXmlId
 	 * @return
 	 */
-	public static List<DeviceFilter> getDeviceFilters(final Context context, final int deviceFilterXmlId) {
+	@SuppressLint("SuspiciousIndentation")
+    public static List<DeviceFilter> getDeviceFilters(final Context context, final int deviceFilterXmlId) {
 		final XmlPullParser parser = context.getResources().getXml(deviceFilterXmlId);
 		final List<DeviceFilter> deviceFilters = new ArrayList<DeviceFilter>();
 		try {

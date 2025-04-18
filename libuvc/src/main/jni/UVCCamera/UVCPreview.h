@@ -56,16 +56,16 @@ typedef struct {
 class UVCPreview {
 private:
 	uvc_device_handle_t *mDeviceHandle;
-	ANativeWindow *mPreviewWindow;
+	ANativeWindow *mPreviewWindow; // 预览窗口
 	volatile bool mIsRunning;
 	int requestWidth, requestHeight, requestMode;
 	int requestMinFps, requestMaxFps;
 	float requestBandwidth;
-	int frameWidth, frameHeight;
+	int frameWidth, frameHeight;// 预览帧大小
 	int frameMode;
 	size_t frameBytes;
 	pthread_t preview_thread;
-	pthread_mutex_t preview_mutex;
+	pthread_mutex_t preview_mutex; // 锁
 	pthread_cond_t preview_sync;
 	ObjectArray<uvc_frame_t *> previewFrames;
 	int previewFormat; // 预览格式

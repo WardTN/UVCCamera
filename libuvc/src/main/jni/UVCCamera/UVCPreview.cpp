@@ -403,19 +403,22 @@ int UVCPreview::startPreview() {
 		{
 			// 如果预览窗口存在，尝试创建预览线程
 			if (LIKELY(mPreviewWindow)) {
-				// 创建线程，运行 `preview_thread_func` 函数，传递 `this` 作为参数
+				// 创建线程 , 运行 `preview_thread_func` 函数，传递 `this` 作为参数
 				result = pthread_create(&preview_thread, NULL, preview_thread_func, (void *)this);
 			}
 		}
+
 		// 如果线程创建失败
 		pthread_mutex_unlock(&preview_mutex);
+
 		if (UNLIKELY(result != EXIT_SUCCESS)) {
 			LOGW("UVCCamera::window does not exist/already running/could not create thread etc.");
 			mIsRunning = false;
+
 			// 锁定互斥锁，并发出同步信号
 			pthread_mutex_lock(&preview_mutex);
 			{
-				pthread_cond_signal(&preview_sync);// 发出条件信号，通知可能等待的线程
+				pthread_cond_signal(&preview_sync); // 发出条件信号，通知可能等待的线程
 			}
 			pthread_mutex_unlock(&preview_mutex); // 解锁互斥锁
 		}
@@ -524,18 +527,33 @@ void UVCPreview::addPreviewFrame(uvc_frame_t *frame) {
 	}
 }
 
+/**
+ * 等待预览帧的获取
+ *
+ * 本函数通过多线程同步机制等待预览帧的可用当预览帧可用时，将其从预览帧队列中移除并返回
+ * 使用互斥锁和条件变量来处理线程间的同步，确保预览帧的安全访问和线程的有效等待
+ *
+ * @return 返回预览帧的指针，如果没有可用的预览帧，则返回NULL
+ */
 uvc_frame_t *UVCPreview::waitPreviewFrame() {
+    // 初始化帧指针为空
 	uvc_frame_t *frame = NULL;
+
+    // 锁定互斥锁以进入临界区
 	pthread_mutex_lock(&preview_mutex);
 	{
+        // 检查预览帧队列是否为空 , 如果为空则等待条件变量
 		if (!previewFrames.size()) {
 			pthread_cond_wait(&preview_sync, &preview_mutex);
 		}
-		if (LIKELY(isRunning() && previewFrames.size() > 0)) {
-			frame = previewFrames.remove(0);
-		}
-	}
-	pthread_mutex_unlock(&preview_mutex);
+
+        // 在确保程序正在运行且预览帧队列不为空的情况下 , 获取并移除预览帧队列中的第一个帧
+        if (LIKELY(isRunning() && previewFrames.size() > 0)) {
+            frame = previewFrames.remove(0);
+        }
+    }
+    // 解锁互斥锁以离开临界区
+    pthread_mutex_unlock(&preview_mutex);
 	return frame;
 }
 
@@ -549,10 +567,16 @@ void UVCPreview::clearPreviewFrame() {
 	pthread_mutex_unlock(&preview_mutex);
 }
 
+/**
+ * 预览线程函数
+ * @param vptr_args
+ * @return
+ */
 void *UVCPreview::preview_thread_func(void *vptr_args) {
 	int result;
 
 	ENTER();
+    // 从 vptr_args 中获取 UVCPreview 对象
 	UVCPreview *preview = reinterpret_cast<UVCPreview *>(vptr_args);
 	if (LIKELY(preview)) {
 		uvc_stream_ctrl_t ctrl;
@@ -593,6 +617,7 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
 			LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, (!requestMode ? "YUYV" : "MJPEG"));
 			pthread_mutex_lock(&preview_mutex);
 			if (LIKELY(mPreviewWindow)) {
+                // 设置预览窗口的缓冲区大小和格式
 				ANativeWindow_setBuffersGeometry(mPreviewWindow,
 					frameWidth, frameHeight, previewFormat);
 			}
@@ -601,6 +626,7 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
 			frameWidth = requestWidth;
 			frameHeight = requestHeight;
 		}
+        // 设置预览帧的格式和字节数
 		frameMode = requestMode;
 		frameBytes = frameWidth * frameHeight * (!requestMode ? 2 : 4);
 		previewBytes = frameWidth * frameHeight * PREVIEW_PIXEL_BYTES;
@@ -629,7 +655,7 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
     mHasCapturing = false;
 	if (LIKELY(!result)) {
 		clearPreviewFrame();
-        // 如果流媒体成功启动，函数会尝试创建捕获线程 capture_thread 来处理摄像头的预览帧：
+        // 如果流媒体成功启动,函数会尝试创建捕获线程 capture_thread 来处理摄像头的预览帧：
 		if (pthread_create(&capture_thread, NULL, capture_thread_func, (void *)this) == 0) {
 		    mHasCapturing = true;
 		}
@@ -644,12 +670,13 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
                 // 通过 waitPreviewFrame() 函数等待新的 MJPEG 帧。
 				frame_mjpeg = waitPreviewFrame();
 				if (LIKELY(frame_mjpeg)) {
+                    // 获取最新一帧
 					frame = get_frame(frame_mjpeg->width * frame_mjpeg->height * 2);
                     // 调用 uvc_mjpeg2yuyv 将 MJPEG 格式的帧转换为 YUYV 格式
 					result = uvc_mjpeg2yuyv(frame_mjpeg, frame);   // MJPEG => yuyv
 					recycle_frame(frame_mjpeg);
 					if (LIKELY(!result)) {
-                        // 将处理后的帧交给 draw_preview_one 函数绘制到窗口，并将其转换为 RGBX 格式。
+                        // 将处理后的帧交给 draw_preview_one 函数绘制到窗口 , 并将其转换为 RGBX 格式。
 						frame = draw_preview_one(frame, &mPreviewWindow, uvc_any2rgbx, 4);
                         // 调用 addCaptureFrame(frame) 将处理后的帧添加到捕获队列中
 						addCaptureFrame(frame);
@@ -669,7 +696,7 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
 			}
 		}
 
-        // 当预览停止时，唤醒捕获线程：
+        // 当预览停止时,唤醒捕获线程：
 		pthread_cond_signal(&capture_sync);
 #if LOCAL_DEBUG
 		LOGI("preview_thread_func:wait for all callbacks complete");

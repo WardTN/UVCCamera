@@ -7,6 +7,9 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+/**
+ * 创建一个在工作线程中的 Handler
+ */
 public class HandlerThreadHandler extends Handler {
 	private static final String TAG = "HandlerThreadHandler";
 

@@ -113,8 +113,8 @@ class UVCCamera {
 	int mFd; // 表示文件描述符，用于设备的低级别 I/O 操作。
 	uvc_device_t *mDevice; // 表示 UVC 设备的指针，代表连接的具体 USB 设备。
 	uvc_device_handle_t *mDeviceHandle; // 表示设备句柄，用于访问和控制 UVC 设备的操作。
-	UVCStatusCallback *mStatusCallback; //表示设备状态的回调函数，用于处理设备的状态变化。
-	UVCButtonCallback *mButtonCallback; //设备按钮的回调函数，用于处理设备按钮的状态变化。
+	UVCStatusCallback *mStatusCallback; // 表示设备状态的回调函数，用于处理设备的状态变化。
+	UVCButtonCallback *mButtonCallback; // 设备按钮的回调函数，用于处理设备按钮的状态变化。
 
 	// 预览视频流对象
 	UVCPreview *mPreview;

@@ -117,9 +117,12 @@ public final class USBMonitor {
         if (DEBUG) XLogWrapper.v(TAG, "USBMonitor:Constructor");
         if (listener == null)
             throw new IllegalArgumentException("OnDeviceConnectListener should not null.");
+        // 创建一个弱引用
         mWeakContext = new WeakReference<>(context);
+        // 获取USB管理器
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
         mOnDeviceConnectListener = listener;
+        // 异步处理Hanlder
         mAsyncHandler = HandlerThreadHandler.createHandler(TAG);
         destroyed = false;
         if (DEBUG) XLogWrapper.v(TAG, "USBMonitor:mUsbManager=" + mUsbManager);
@@ -166,6 +169,8 @@ public final class USBMonitor {
     @SuppressLint({"UnspecifiedImmutableFlag", "WrongConstant"})
     public synchronized void register() throws IllegalStateException {
         if (destroyed) throw new IllegalStateException("already destroyed");
+
+        // 注册一个 BroadcastReceiver 以监控 USB 设备的 连接 和 断开事件
         if (mPermissionIntent == null) {
             if (DEBUG) XLogWrapper.i(TAG, "register:");
             final Context context = mWeakContext.get();
@@ -175,7 +180,7 @@ public final class USBMonitor {
                     // when using PendingIntent.FLAG_IMMUTABLE
                     // because it means Intent can't be modified anywhere -- jiangdg/20220929
                     int PENDING_FLAG_IMMUTABLE = 1 << 25;
-                    mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PENDING_FLAG_IMMUTABLE);
+                    mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
                 } else {
                     mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
                 }
@@ -185,6 +190,7 @@ public final class USBMonitor {
                 filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED); // USB 设备分离
                 context.registerReceiver(mUsbReceiver, filter);
             }
+
             // start connection check
             mDeviceCounts = 0;
             mAsyncHandler.postDelayed(mDeviceCheckRunnable, 1000);
@@ -198,7 +204,9 @@ public final class USBMonitor {
      */
     public synchronized void unregister() throws IllegalStateException {
         // 接続チェック用Runnableを削除
+        //清除设备连接数
         mDeviceCounts = 0;
+
         if (!destroyed) {
             mAsyncHandler.removeCallbacks(mDeviceCheckRunnable);
         }
@@ -320,7 +328,8 @@ public final class USBMonitor {
         if (destroyed) throw new IllegalStateException("already destroyed");
         // get detected devices
         final HashMap<String, UsbDevice> deviceList = mUsbManager.getDeviceList();
-        final List<UsbDevice> result = new ArrayList<UsbDevice>();
+        final List<UsbDevice> result = new ArrayList<>();
+
         if (deviceList != null) {
             if ((filters == null) || filters.isEmpty()) {
                 result.addAll(deviceList.values());
@@ -580,11 +589,9 @@ public final class USBMonitor {
             }
             if ((n > mDeviceCounts) || (m > hasPermissionCounts)) {
                 mDeviceCounts = n;
-                if (mOnDeviceConnectListener != null) {
-                    for (int i = 0; i < n; i++) {
-                        final UsbDevice device = devices.get(i);
-                        mAsyncHandler.post(() -> mOnDeviceConnectListener.onAttach(device));
-                    }
+                for (int i = 0; i < n; i++) {
+                    final UsbDevice device = devices.get(i);
+                    mAsyncHandler.post(() -> mOnDeviceConnectListener.onAttach(device));
                 }
             }
             mAsyncHandler.postDelayed(this, 2000);    // confirm every 2 seconds
@@ -592,7 +599,7 @@ public final class USBMonitor {
     };
 
     /**
-     * 处理USB 设备的连接事件
+     * 处理 USB 设备的连接事件
      * 1.检查对象是否已销毁。
      * 2.更新权限。
      * 3.创建或获取 UsbControlBlock 对象。
@@ -620,6 +627,7 @@ public final class USBMonitor {
             } else {
                 createNew = false;
             }
+
             // 通知设备连接监听器
             if (mOnDeviceConnectListener != null) {
                 // 表示打开设备失败 记录错误日志并调用 onCancel 方法通知监听器设备连接失败
@@ -628,7 +636,7 @@ public final class USBMonitor {
                     mOnDeviceConnectListener.onCancel(device);
                     return;
                 }
-                // 如果设备连接成功，调用 onConnect 方法，传递设备、控制块和是否是新创建的标志。
+                // 如果设备连接成功,调用 onConnect 方法，传递设备、控制块和是否是新创建的标志。
                 mOnDeviceConnectListener.onConnect(device, ctrlBlock, createNew);
             }
         });
@@ -639,12 +647,7 @@ public final class USBMonitor {
         if (DEBUG) XLogWrapper.v(TAG, "processCancel:");
         updatePermission(device, false);
         if (mOnDeviceConnectListener != null) {
-            mAsyncHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mOnDeviceConnectListener.onCancel(device);
-                }
-            });
+            mAsyncHandler.post(() -> mOnDeviceConnectListener.onCancel(device));
         }
     }
 
@@ -699,16 +702,22 @@ public final class USBMonitor {
     }
 
     /**
-     * 获取设备 KeyName
-     * USB機器毎の設定保存用にデバイスキー名を生成する。この機器名をHashMapのキーにする
-     * UsbDeviceがopenしている時のみ有効
-     * ベンダーID, プロダクトID, デバイスクラス, デバイスサブクラス, デバイスプロトコルから生成
-     * serialがnullや空文字でなければserialを含めたデバイスキー名を生成する
-     * useNewAPI=trueでAPIレベルを満たしていればマニュファクチャ名, バージョン, コンフィギュレーションカウントも使う
      *
-     * @param device    nullなら空文字列を返す
-     * @param serial    UsbDeviceConnection#getSerialで取得したシリアル番号を渡す, nullでuseNewAPI=trueでAPI>=21なら内部で取得
-     * @param useNewAPI API>=21またはAPI>=23のみで使用可能なメソッドも使用する(ただし機器によってはnullが返ってくるので有効かどうかは機器による)
+     生成设备的唯一标识键（KeyName） 此方法用于为每个USB设备生成一个唯一的键名，以便在 HashMap 中作为键值使用。
+     该键名仅在 UsbDevice 已打开时有效，并根据以下信息生成：
+     厂商ID（Vendor ID）
+     产品ID（Product ID）
+     设备类（Device Class）
+     设备子类（Device Subclass）
+     设备协议（Device Protocol）
+     如果 serial 不为空或非空字符串，则会将 serial 信息包含在生成的键名中。当 useNewAPI=true 且满足 API 级别要求时（如 API >= 21 或 API >= 23），还会尝试使用以下额外信息：
+     制造商名称（Manufacturer Name）
+     设备版本（Version）
+     配置项数量（Configuration Count）
+     需要注意的是，某些设备可能返回 null 值，因此具体有效性取决于设备本身。
+     * @param device
+     * @param serial
+     * @param useNewAPI
      * @return
      */
     @SuppressLint("NewApi")
@@ -1101,6 +1110,7 @@ public final class USBMonitor {
             if (device == null) {
                 throw new IllegalStateException("device may already be removed");
             }
+
             mConnection = monitor.mUsbManager.openDevice(device);
             if (mConnection == null) {
                 XLogWrapper.w(TAG, "openDevice failed in UsbControlBlock, wait and try again");
@@ -1115,8 +1125,8 @@ public final class USBMonitor {
                 }
             }
             mInfo = updateDeviceInfo(monitor.mUsbManager, device, null);
-            mWeakMonitor = new WeakReference<USBMonitor>(monitor);
-            mWeakDevice = new WeakReference<UsbDevice>(device);
+            mWeakMonitor = new WeakReference<>(monitor);
+            mWeakDevice = new WeakReference<>(device);
             mBusNum = src.mBusNum;
             mDevNum = src.mDevNum;
             // FIXME USBMonitor.mCtrlBlocksに追加する(今はHashMapなので追加すると置き換わってしまうのでだめ, ListかHashMapにListをぶら下げる?)
@@ -1355,7 +1365,6 @@ public final class USBMonitor {
          * @return
          * @throws IllegalStateException
          */
-        @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
         public synchronized UsbInterface getInterface(final int interface_id, final int altsetting) throws IllegalStateException {
             checkConnection();
             SparseArray<UsbInterface> intfs = mInterfaces.get(interface_id);

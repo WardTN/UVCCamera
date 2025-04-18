@@ -156,7 +156,7 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
 //			libusb_set_debug(mContext->usb_ctx, LIBUSB_LOG_LEVEL_DEBUG);
 			if (UNLIKELY(result < 0)) {
 				LOGD("failed to init libuvc");
-				RETURN(result, int);
+				RETURN(result, int)
 			}
 		}
 		// 清除摄像头功能标志

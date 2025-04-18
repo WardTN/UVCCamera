@@ -102,11 +102,11 @@ public class UVCCamera {
 	private USBMonitor.UsbControlBlock mCtrlBlock;
     protected long mControlSupports;			//相机控件支持的功能标志
     protected long mProcSupports;				// 处理单元支持的功能标志
-    protected int mCurrentFrameFormat = FRAME_FORMAT_MJPEG;
-	protected int mCurrentWidth = 640, mCurrentHeight = 480;
-	protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH;
-    protected String mSupportedSize;
-    protected List<Size> mCurrentSizeList;
+    protected int mCurrentFrameFormat = FRAME_FORMAT_MJPEG; // 当前使用的帧格式
+	protected int mCurrentWidth = 640, mCurrentHeight = 480; // 当前使用的分辨率
+	protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH; // 当前使用的带宽
+    protected String mSupportedSize; // 支持的分辨率
+    protected List<Size> mCurrentSizeList; // 当前使用的分辨率列表
 	// these fields from here are accessed from native code and do not change name and remove
     protected long mNativePtr;
     protected int mScanningModeMin, mScanningModeMax, mScanningModeDef;
